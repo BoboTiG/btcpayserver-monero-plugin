@@ -32,7 +32,14 @@ public static class IntegrationTestUtils
         MoneroRpcProvider moneroRpcProvider = playwrightTester.Server.PayTester.GetService<MoneroRpcProvider>();
         if (moneroRpcProvider.IsAvailable("XMR"))
         {
-            await moneroRpcProvider.CloseWallet("XMR");
+            try
+            {
+                await moneroRpcProvider.CloseWallet("XMR");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to close wallet during cleanup");
+            }
         }
 
         if (RunsInContainer)
@@ -253,6 +260,28 @@ public static class IntegrationTestUtils
                 restore_height = 0,
                 password
             }
+        };
+
+        var json = JsonSerializer.Serialize(requestPayload);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await httpClient.PostAsync("/json_rpc", content);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public static async Task CloseTestXmrWalletViaRpc()
+    {
+        var host = RunsInContainer ? "xmr_wallet" : "localhost";
+
+        using var httpClient = new HttpClient();
+        var uri = new UriBuilder { Scheme = "http", Host = host, Port = 18082 }.Uri;
+        httpClient.BaseAddress = uri;
+
+        var requestPayload = new
+        {
+            id = "0",
+            jsonrpc = "2.0",
+            method = "close_wallet"
         };
 
         var json = JsonSerializer.Serialize(requestPayload);

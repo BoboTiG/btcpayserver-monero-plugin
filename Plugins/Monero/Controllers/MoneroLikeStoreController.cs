@@ -68,14 +68,13 @@ namespace BTCPayServer.Plugins.Monero.Controllers
             };
         }
 
-        private Task<GetAccountsResponse> GetAccounts(string cryptoCode)
+        private async Task<GetAccountsResponse> GetAccounts(string cryptoCode)
         {
             try
             {
                 if (_MoneroRpcProvider.Summaries.TryGetValue(cryptoCode, out var summary) && summary.WalletAvailable)
                 {
-
-                    return _MoneroRpcProvider.WalletRpcClients[cryptoCode].SendCommandAsync<GetAccountsRequest, GetAccountsResponse>("get_accounts", new GetAccountsRequest());
+                    return await _MoneroRpcProvider.WalletRpcClients[cryptoCode].SendCommandAsync<GetAccountsRequest, GetAccountsResponse>("get_accounts", new GetAccountsRequest());
                 }
             }
             catch
@@ -83,7 +82,7 @@ namespace BTCPayServer.Plugins.Monero.Controllers
                 // ignored
             }
 
-            return Task.FromResult<GetAccountsResponse>(null);
+            return null;
         }
 
         private MoneroLikePaymentMethodViewModel GetMoneroLikePaymentMethodViewModel(
@@ -125,6 +124,7 @@ namespace BTCPayServer.Plugins.Monero.Controllers
                 AccountIndex = settings?.AccountIndex ?? accountsResponse?.Accounts?.FirstOrDefault()?.AccountIndex ?? 0,
                 Accounts = accounts == null ? null : new SelectList(accounts, nameof(SelectListItem.Value),
                     nameof(SelectListItem.Text)),
+                HasDeprecatedPasswordFile = _MoneroRpcProvider.HasDeprecatedPasswordFile(cryptoCode),
                 SettlementConfirmationThresholdChoice = settlementThresholdChoice,
                 CustomSettlementConfirmationThreshold =
                     settings != null &&
@@ -283,6 +283,7 @@ namespace BTCPayServer.Plugins.Monero.Controllers
 
             public IEnumerable<SelectListItem> Accounts { get; set; }
             public bool WalletFileFound { get; set; }
+            public bool HasDeprecatedPasswordFile { get; set; }
             [Display(Name = "Primary Public Address")]
             public string PrimaryAddress { get; set; }
             [Display(Name = "Private View Key")]
